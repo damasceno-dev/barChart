@@ -2,7 +2,7 @@
 import * as d3 from 'd3'
 import { useEffect, useRef, useState} from 'react';
 import { D3tutorial } from './d3tutorial';
-import { BarChartTry, BarChartWithDiv, BarChartWithDiv2, BarChartWithDiv3 } from './freeCodeCamp';
+import { BarChartWithDiv, BarChartWithDiv2, BarChartWithDiv3, SvgHoverTest } from './freeCodeCamp';
 
 //o plano: refazer fcc tentado o mesmo resultado com o react way
 
@@ -10,6 +10,7 @@ export default function Home() {
 
   return (
     <BarChartWithDiv3/>
+    // <SvgHoverTest></SvgHoverTest>
   )
 }
 

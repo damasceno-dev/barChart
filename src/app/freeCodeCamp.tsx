@@ -6,6 +6,68 @@ interface GDPYear {
   gdp: number;
 }
 
+export function SvgHoverTest() {
+
+  const x = 2222;
+  const y = 3333;
+  const z = 4444;
+  return (
+    <main className="w-full h-[100vh] flex items-center justify-center">
+    <svg width={1700} height={700} className='inline-block bg-white m-[1px] text-red-800'>
+
+          <rect height='350' width='350' x='5' y='100' className={`fill-gray-500 peer/${x}`}>
+          </rect>
+          <g className={`peer-hover/${x}:visible peer-hover/${x}:opacity-100 invisible opacity-0 transition-all duration-350`}>
+            <rect  height='350' width='350' x='200' y='100' className='fill-indigo-800'>
+              {/* <title>{YearToQuarter(year)} - ${BillionFormat(gdp)}</title> */}
+            </rect>
+            <text x='50' y='50'>hei hei</text>
+          </g>
+
+          <rect height='350' width='350' x='505' y='100' className={`fill-gray-500 peer/${y}`}>
+          </rect>
+          <g className={`peer-hover/${y}:visible peer-hover/${y}:opacity-100 invisible opacity-0 transition-all duration-350`}>
+            <rect height='350' width='350' x='800' y='100' className='fill-indigo-800'>
+              {/* <title>{YearToQuarter(year)} - ${BillionFormat(gdp)}</title> */}
+            </rect>
+            <text x='50' y='50'>hei hei</text>
+          </g>
+
+          <PureElement></PureElement>
+
+
+    </svg>
+    </main>
+  )
+}
+
+export function PureElement() {
+  
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  return (
+    <>
+      <rect height='350' width='350' x='905' y='100' className={`fill-gray-500 peer`} onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}>
+      </rect>
+      <g className={isHovered ? `visible opacity-80 transition-all duration-500` : `invisible opacity-0 transition-all duration-500`}>
+        <rect height='350' width='350' x='1005' y='100' className='fill-indigo-800'>
+          {/* <title>{YearToQuarter(year)} - ${BillionFormat(gdp)}</title> */}
+        </rect>
+        <text x='50' y='50'>hei hei</text>
+      </g>
+    </>
+  )
+}
+
 export function BarChartWithDiv3() {
   const [data, setData] = useState<GDPYear[]>([]);
 
@@ -43,9 +105,32 @@ export function BarChartWithDiv3() {
   const barHeight: rectValue = (value) => value/30;
   const xSpacing: rectValue = (index) => index*6 + 10;
 
+  const YearToQuarter = (yearMonthDay: string) : string => {
 
-  // todo: function that recieves an year-month and returns year and quarter
-  // todo: 18064.7 => 18,064.7 Billion 
+    const month = Number(yearMonthDay.substring(5,7))
+    const year = Number(yearMonthDay.substring(0,4))
+
+    if (typeof month !== 'number') {
+      throw Error('Expected to recieve a month number at position 5 to 6 for the string ' + yearMonthDay);
+    }
+    if (typeof year !== 'number') {
+      throw Error('Expected to recieve a year number at position 0 to 3 for the string ' + yearMonthDay);
+    }
+
+    const quarter = month >= 0 && month <= 3 ? 'Q1' :
+                    month >= 4 && month <= 6 ? 'Q2' :
+                    month >= 7 && month <= 9 ? 'Q3' :
+                    'Q4';
+    
+    return year + ' ' + quarter;
+  }
+
+  const BillionFormat = (value: number):string =>  {
+    //todo: value/1000 < 100 => millions
+    let plural = value/1000 > 2 ? 'Billions' : 'Billion'
+    let dollarUSLocale = Intl.NumberFormat('en-US');
+    return `${dollarUSLocale.format(value)} ${plural}`
+  }
 
   return (
     <main className="w-full h-[100vh] flex items-center justify-center">
@@ -53,14 +138,63 @@ export function BarChartWithDiv3() {
       {/* {data.map((x, i) => <h1 className="text-white" key={i}> {x.gdp}</h1>)} */}
       {data.map(({year,gdp}, i) => {
         return (
-          <rect key={i} height={barHeight(gdp)} width='5' x={xSpacing(i)} y={svgHeight - barHeight(gdp)} className='fill-indigo-600 m-[1px] hover:fill-green-500'>
-            <title>{year} - {gdp}</title>
-          </rect>
+          // <>
+          //   <rect key={i} height={barHeight(gdp)} width='5' x={xSpacing(i)} y={svgHeight - barHeight(gdp)} className={`peer fill-indigo-600 hover:fill-green-500`}>
+          //   </rect>
+          //   <g className={`peer-hover:visible peer-hover:opacity-100 invisible opacity-0 transition-all duration-500`}>
+          //     <rect  height='500' width='500' x='200' y='100' className='fill-indigo-800'>
+          //     </rect>
+          //     <text x='50' y='50'>{YearToQuarter(year)} - ${BillionFormat(gdp)}</text>
+          //   </g>
+          // </>
+          <RectElement 
+            key={i}
+            i={i} barHeight={barHeight(gdp)} xSpacing={xSpacing(i)} svgHeight={svgHeight}
+            date={YearToQuarter(year)} gdp={BillionFormat(gdp)}
+          />
+
         )
       })}
       </svg>
     </main>
   )
+}
+
+interface RectElementProps {
+  i: number;
+  barHeight: number;
+  xSpacing: number;
+  svgHeight: number;
+  date: string;
+  gdp: string;
+}
+
+export function RectElement({i, barHeight, xSpacing, svgHeight, date, gdp}: RectElementProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  return (
+          <>
+            <rect key={i} height={barHeight} width='5' x={xSpacing} y={svgHeight - barHeight} className={`fill-indigo-600 hover:fill-green-500`} onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}>
+              {/* <title>{YearToQuarter(year)} - ${BillionFormat(gdp)}</title> */}
+            </rect>
+            <g className={isHovered ? `z-10 visible opacity-100 transition-all duration-150` : `z-10 invisible opacity-0 transition-all duration-150`}>
+              <rect height='70' width='250' x={i < 90 ? xSpacing : xSpacing - 200} y={svgHeight - barHeight - 90} className='fill-indigo-800 z-10'>
+                {/* <title>{YearToQuarter(year)} - ${BillionFormat(gdp)}</title> */}
+              </rect>
+              <text className='fill-white' x={i < 90 ? xSpacing + 50 : xSpacing - 165} y={svgHeight - barHeight - 50}>{date} - ${gdp}</text>
+            </g>
+          </>
+
+        )
 }
 
 export function BarChartWithDiv2() {
