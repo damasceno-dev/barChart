@@ -134,27 +134,16 @@ export function BarChartWithDiv3() {
 
   return (
     <main className="w-full h-[100vh] flex items-center justify-center">
-      <svg width={1700} height={svgHeight} className='inline-block bg-white m-[1px] text-red-800'>
-      {/* {data.map((x, i) => <h1 className="text-white" key={i}> {x.gdp}</h1>)} */}
-      {data.map(({year,gdp}, i) => {
-        return (
-          // <>
-          //   <rect key={i} height={barHeight(gdp)} width='5' x={xSpacing(i)} y={svgHeight - barHeight(gdp)} className={`peer fill-indigo-600 hover:fill-green-500`}>
-          //   </rect>
-          //   <g className={`peer-hover:visible peer-hover:opacity-100 invisible opacity-0 transition-all duration-500`}>
-          //     <rect  height='500' width='500' x='200' y='100' className='fill-indigo-800'>
-          //     </rect>
-          //     <text x='50' y='50'>{YearToQuarter(year)} - ${BillionFormat(gdp)}</text>
-          //   </g>
-          // </>
-          <RectElement 
-            key={i}
-            i={i} barHeight={barHeight(gdp)} xSpacing={xSpacing(i)} svgHeight={svgHeight}
-            date={YearToQuarter(year)} gdp={BillionFormat(gdp)}
-          />
-
-        )
-      })}
+      <svg width={1710} height={svgHeight} className='inline-block bg-black m-[1px] text-red-800'>
+      {data.map(({year,gdp}, i) => <RectElement  
+                                      key={i}
+                                      i={i} 
+                                      barHeight={barHeight(gdp)} 
+                                      xSpacing={xSpacing(i)} 
+                                      svgHeight={svgHeight}
+                                      date={YearToQuarter(year)} 
+                                      gdp={BillionFormat(gdp)}
+                                    />)}
       </svg>
     </main>
   )
@@ -182,15 +171,28 @@ export function RectElement({i, barHeight, xSpacing, svgHeight, date, gdp}: Rect
 
   return (
           <>
-            <rect key={i} height={barHeight} width='5' x={xSpacing} y={svgHeight - barHeight} className={`fill-indigo-600 hover:fill-green-500`} onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}>
-              {/* <title>{YearToQuarter(year)} - ${BillionFormat(gdp)}</title> */}
-            </rect>
-            <g className={isHovered ? `z-10 visible opacity-100 transition-all duration-150` : `z-10 invisible opacity-0 transition-all duration-150`}>
-              <rect height='70' width='250' x={i < 90 ? xSpacing : xSpacing - 200} y={svgHeight - barHeight - 90} className='fill-indigo-800 z-10'>
-                {/* <title>{YearToQuarter(year)} - ${BillionFormat(gdp)}</title> */}
-              </rect>
+            <rect key={i} 
+                  height={barHeight} width='5' 
+                  x={xSpacing} y={svgHeight - barHeight} 
+                  className={`fill-indigo-600 hover:fill-green-500`}    
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                  
+            />
+            <g className={isHovered ? `visible opacity-100 transition-all duration-300` : `invisible opacity-0 transition-all duration-300`}>
+              <rect height='70' width='250' x={i < 90 ? xSpacing : xSpacing - 200} y={svgHeight - barHeight - 90} className='fill-indigo-800 stroke-green-500 stroke-2' filter="url(#f1)"/>
               <text className='fill-white' x={i < 90 ? xSpacing + 50 : xSpacing - 165} y={svgHeight - barHeight - 50}>{date} - ${gdp}</text>
+              <line x1={i < 90 ? xSpacing + 140 : xSpacing - 80} y1={svgHeight - barHeight - 20} x2={xSpacing} y2={svgHeight - barHeight} className='stroke-green-500 stroke-2'/>
+              <filter id="f1" x="0" y="0" width="200%" height="200%">
+                <feComponentTransfer in="SourceGraphic">
+                <feFuncR type="discrete" tableValues="0.8"/>
+                <feFuncG type="discrete" tableValues="1"/>
+                <feFuncB type="discrete" tableValues="0.8"/>
+                </feComponentTransfer>
+                <feGaussianBlur stdDeviation="3"/>
+                <feOffset dx="2" dy="2" result="shadow"/>
+                <feComposite in="SourceGraphic" in2="shadow" operator="over"/>
+              </filter>
             </g>
           </>
 
