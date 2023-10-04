@@ -1,10 +1,183 @@
-import d3 from "d3";
+import * as d3 from 'd3'
 import { useRef, useEffect, useState, MouseEventHandler } from "react";
 
 interface GDPYear {
   year: string;
   gdp: number;
 }
+export function BarChartWithDiv3() {
+  const [data, setData] = useState<GDPYear[]>([]);
+
+  const svgHeight = 600;
+  const svgWidth = 1200;
+  const xPadding = 40;
+  const yPadding = 15;
+  const topPadding = 80;
+
+  let yScale: d3.ScaleLinear<number, number, never>; let xScale : d3.ScaleLinear<number, number, never>;
+
+  useEffect(() => {
+
+    let ignore = false; //bool for the cleanup function => 
+
+    async function getData() {
+      try {
+        const res = await fetch('https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json')
+        const data = await res.json()
+        const GDP_objectArray = data.data.map((tupleYearValue: [string,number])  => {
+          return (
+            {year: tupleYearValue[0], gdp: tupleYearValue[1]}
+          )
+        })
+        if (!ignore) {
+          setData(GDP_objectArray)
+        }
+
+      } catch (error) {
+        
+      }
+    }
+    getData()
+
+    return () => {
+      ignore = true;
+    }
+
+  }, [])
+  
+  
+    const yearValues = data.filter(x=> x.year !== undefined).map(x => x.year)
+    
+    if(yearValues.length > 0) {
+      const yearMin = d3.minIndex(yearValues); const yearMax = d3.maxIndex(yearValues);
+    
+      if (yearMin !== undefined && yearMax !== undefined) {
+        xScale = d3.scaleLinear([yearMin, yearMax], [0 + xPadding, svgWidth - xPadding])
+      } else {
+        throw Error('Invalid year value')
+      }
+    }
+
+
+  const gdpValues = data.filter(x => x.gdp !== undefined).map(x => x.gdp)
+
+  if (gdpValues.length > 0) {
+    const [gdpMin, gdpMax] = d3.extent(gdpValues)
+    // const [gdpMin, gdpMax] = [d3.min(gdpValues), d3.max(gdpValues)]
+    if (gdpMin !== undefined && gdpMax !== undefined) {
+      yScale = d3.scaleLinear([gdpMin, gdpMax], [0 + yPadding, svgHeight - yPadding - topPadding])
+    } else {
+      throw Error('Invalid gdp value')
+    }
+  }
+
+
+  
+  type rectValue = (input: number) => number;
+
+  // const barHeight: rectValue = (value) => value/30;
+  const barHeight: rectValue = (value) => yScale(value);
+  // const xSpacing: rectValue = (index) => index*6 + 10;
+  const xSpacing: rectValue = (index) => xScale(index);
+
+  const YearToQuarter = (yearMonthDay: string) : string => {
+
+    const month = Number(yearMonthDay.substring(5,7))
+    const year = Number(yearMonthDay.substring(0,4))
+
+    if (typeof month !== 'number') {
+      throw Error('Expected to recieve a month number at position 5 to 6 for the string ' + yearMonthDay);
+    }
+    if (typeof year !== 'number') {
+      throw Error('Expected to recieve a year number at position 0 to 3 for the string ' + yearMonthDay);
+    }
+
+    const quarter = month >= 0 && month <= 3 ? 'Q1' :
+                    month >= 4 && month <= 6 ? 'Q2' :
+                    month >= 7 && month <= 9 ? 'Q3' :
+                    'Q4';
+    
+    return year + ' ' + quarter;
+  }
+
+  const BillionFormat = (value: number):string =>  {
+    let plural = value/1000 > 2 ? 'Billions' : 'Billion'
+    let dollarUSLocale = Intl.NumberFormat('en-US');
+    return `${dollarUSLocale.format(value)} ${plural}`
+  }
+
+  return (
+    <main className="w-full h-[100vh] flex items-center justify-center">
+      <svg width={svgWidth} height={svgHeight} className='inline-block bg-black m-[1px] text-red-800'>
+      {data.map(({year,gdp}, i) => <RectElement  
+                                      key={i}
+                                      rectWidth={4}
+                                      i={i} 
+                                      barHeight={barHeight(gdp)} 
+                                      xSpacing={xSpacing(i)} 
+                                      svgHeight={svgHeight}
+                                      date={YearToQuarter(year)} 
+                                      gdp={BillionFormat(gdp)}
+                                    />)}
+      </svg>
+    </main>
+  )
+}
+
+interface RectElementProps {
+  i: number;
+  rectWidth: number;
+  barHeight: number;
+  xSpacing: number;
+  svgHeight: number;
+  date: string;
+  gdp: string;
+}
+
+export function RectElement({i, rectWidth, barHeight, xSpacing, svgHeight, date, gdp}: RectElementProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  return (
+          <>
+            <rect key={i} 
+                  height={barHeight} width={rectWidth} 
+                  x={xSpacing} y={svgHeight - barHeight} 
+                  className={`fill-indigo-600 hover:fill-green-500`}    
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                  
+            />
+            <g className={isHovered ? `visible opacity-100 transition-all duration-300` : `invisible opacity-0 transition-all duration-300`}>
+              <rect height='70' width='230' x={i < 90 ? xSpacing : xSpacing - 200} y={svgHeight - barHeight - 90} className='fill-indigo-800 stroke-green-500 stroke-2' filter="url(#f1)"/>
+              <text className='fill-white' x={i < 90 ? xSpacing + 30 : xSpacing - 185} y={svgHeight - barHeight - 50}>{date} - ${gdp}</text>
+              <line x1={i < 90 ? xSpacing + 140 : xSpacing - 80} y1={svgHeight - barHeight - 20} x2={xSpacing} y2={svgHeight - barHeight} className='stroke-green-500 stroke-2'/>
+              <filter id="f1" x="0" y="0" width="200%" height="200%">
+
+                esse blur tá funcionando?
+                <feComponentTransfer in="SourceGraphic">
+                <feFuncR type="discrete" tableValues="0.8"/>
+                <feFuncG type="discrete" tableValues="1"/>
+                <feFuncB type="discrete" tableValues="0.8"/>
+                </feComponentTransfer>
+                <feGaussianBlur stdDeviation="3"/>
+                <feOffset dx="2" dy="2" result="shadow"/>
+                <feComposite in="SourceGraphic" in2="shadow" operator="over"/>
+              </filter>
+            </g>
+          </>
+
+        )
+}
+
+
 
 export function SvgHoverTest() {
 
@@ -68,136 +241,6 @@ export function PureElement() {
   )
 }
 
-export function BarChartWithDiv3() {
-  const [data, setData] = useState<GDPYear[]>([]);
-
-  useEffect(() => {
-
-    let ignore = false; //bool for the cleanup function => 
-
-    async function getData() {
-      try {
-        const res = await fetch('https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json')
-        const data = await res.json()
-        const GDP_objectArray = data.data.map((tupleYearValue: [string,number])  => {
-          return (
-            {year: tupleYearValue[0], gdp: tupleYearValue[1]}
-          )
-        })
-        if (!ignore) {
-          setData(GDP_objectArray)
-        }
-      } catch (error) {
-        
-      }
-    }
-    getData()
-
-    return () => {
-      ignore = true;
-    }
-
-  }, [])
-
-  type rectValue = (input: number) => number;
-  
-  const svgHeight = 700
-  const barHeight: rectValue = (value) => value/30;
-  const xSpacing: rectValue = (index) => index*6 + 10;
-
-  const YearToQuarter = (yearMonthDay: string) : string => {
-
-    const month = Number(yearMonthDay.substring(5,7))
-    const year = Number(yearMonthDay.substring(0,4))
-
-    if (typeof month !== 'number') {
-      throw Error('Expected to recieve a month number at position 5 to 6 for the string ' + yearMonthDay);
-    }
-    if (typeof year !== 'number') {
-      throw Error('Expected to recieve a year number at position 0 to 3 for the string ' + yearMonthDay);
-    }
-
-    const quarter = month >= 0 && month <= 3 ? 'Q1' :
-                    month >= 4 && month <= 6 ? 'Q2' :
-                    month >= 7 && month <= 9 ? 'Q3' :
-                    'Q4';
-    
-    return year + ' ' + quarter;
-  }
-
-  const BillionFormat = (value: number):string =>  {
-    //todo: value/1000 < 100 => millions
-    let plural = value/1000 > 2 ? 'Billions' : 'Billion'
-    let dollarUSLocale = Intl.NumberFormat('en-US');
-    return `${dollarUSLocale.format(value)} ${plural}`
-  }
-
-  return (
-    <main className="w-full h-[100vh] flex items-center justify-center">
-      <svg width={1710} height={svgHeight} className='inline-block bg-black m-[1px] text-red-800'>
-      {data.map(({year,gdp}, i) => <RectElement  
-                                      key={i}
-                                      i={i} 
-                                      barHeight={barHeight(gdp)} 
-                                      xSpacing={xSpacing(i)} 
-                                      svgHeight={svgHeight}
-                                      date={YearToQuarter(year)} 
-                                      gdp={BillionFormat(gdp)}
-                                    />)}
-      </svg>
-    </main>
-  )
-}
-
-interface RectElementProps {
-  i: number;
-  barHeight: number;
-  xSpacing: number;
-  svgHeight: number;
-  date: string;
-  gdp: string;
-}
-
-export function RectElement({i, barHeight, xSpacing, svgHeight, date, gdp}: RectElementProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const handleMouseEnter = () => {
-    setIsHovered(true);
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-  };
-
-  return (
-          <>
-            <rect key={i} 
-                  height={barHeight} width='5' 
-                  x={xSpacing} y={svgHeight - barHeight} 
-                  className={`fill-indigo-600 hover:fill-green-500`}    
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
-                  
-            />
-            <g className={isHovered ? `visible opacity-100 transition-all duration-300` : `invisible opacity-0 transition-all duration-300`}>
-              <rect height='70' width='250' x={i < 90 ? xSpacing : xSpacing - 200} y={svgHeight - barHeight - 90} className='fill-indigo-800 stroke-green-500 stroke-2' filter="url(#f1)"/>
-              <text className='fill-white' x={i < 90 ? xSpacing + 50 : xSpacing - 165} y={svgHeight - barHeight - 50}>{date} - ${gdp}</text>
-              <line x1={i < 90 ? xSpacing + 140 : xSpacing - 80} y1={svgHeight - barHeight - 20} x2={xSpacing} y2={svgHeight - barHeight} className='stroke-green-500 stroke-2'/>
-              <filter id="f1" x="0" y="0" width="200%" height="200%">
-                <feComponentTransfer in="SourceGraphic">
-                <feFuncR type="discrete" tableValues="0.8"/>
-                <feFuncG type="discrete" tableValues="1"/>
-                <feFuncB type="discrete" tableValues="0.8"/>
-                </feComponentTransfer>
-                <feGaussianBlur stdDeviation="3"/>
-                <feOffset dx="2" dy="2" result="shadow"/>
-                <feComposite in="SourceGraphic" in2="shadow" operator="over"/>
-              </filter>
-            </g>
-          </>
-
-        )
-}
 
 export function BarChartWithDiv2() {
   const [data, setData] = useState<GDPYear[]>([]);
@@ -246,8 +289,6 @@ export function BarChartWithDiv() {
     .then(response => response.json())
     .then(data => setData(data.data))
   }, [])
-
-  console.log(data)
   
   return (
     <main className="w-full h-[100vh]">
