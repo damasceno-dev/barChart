@@ -1,5 +1,12 @@
+import * as d3 from 'd3'
+const xScale = d3.scaleLinear([0,10], [0,100])
+const abscissAxis = d3.axisBottom(xScale)
+const orditanteAxis = 'to-do';
 
+const svg = d3.select("body")
+.append("svg")
 
+svg.append('g').attr('transform', 'translate(' + 0 +',0)').call(abscissAxis)
 
 export function save() {
   const dataset = [
