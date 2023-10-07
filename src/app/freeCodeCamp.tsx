@@ -1,5 +1,7 @@
 import * as d3 from 'd3'
+import { InterpolatorFactory, UnknownReturnType } from 'd3';
 import { useRef, useEffect, useState } from "react";
+import { Z_UNKNOWN } from 'zlib';
 
 interface GDPYear {
   year: string;
@@ -14,9 +16,8 @@ export function BarChartWithDiv3() {
   const yPadding = 45;
   const topPadding = 80;
 
-  let yScale: d3.ScaleLinear<number, number, never>; 
-  // let xScale : d3.ScaleLinear<number, number, never>;
-  let xScale: d3.ScaleTime<number, number, number | undefined>;
+  let xScale: d3.ScaleTime<number, number, number | undefined> = d3.scaleTime();
+  let yScale: d3.ScaleLinear<number, number, never> = d3.scaleLinear();
 
   useEffect(() => {
 
@@ -50,15 +51,13 @@ export function BarChartWithDiv3() {
 
     // const yearValues = data.filter(x=> x.year !== undefined).map(x => yearToNumber(x.year))
     const yearValues = data.filter(x=> x.year !== undefined).map(x => new Date(x.year))
-    console.log(yearValues)
     if(yearValues.length > 0) {
       // const yearMin = d3.minIndex(yearValues); const yearMax = d3.maxIndex(yearValues);
       const [yearMin, yearMax] = d3.extent(yearValues); 
       if (yearMin !== undefined && yearMax !== undefined) {
         // xScale = d3.scaleLinear([yearMin, yearMax], [0 + xPadding, svgWidth - xPadding])
         xScale = d3.scaleTime([yearMin, yearMax], [0 + xPadding, svgWidth - xPadding])
-        console.log(xScale(yearMin), xScale(yearMax))
-        xScale.ticks().map(x => console.log(x))
+        console.log(xScale)
       } else {
         throw Error('Invalid year value')
       }
@@ -126,60 +125,18 @@ export function BarChartWithDiv3() {
   return (
     <main className="w-full h-[100vh] flex items-center justify-center">
       <svg width={svgWidth} height={svgHeight} className='inline-block bg-white m-[1px] text-red-600'>
-      {/* AxisBottom */}
-      <path
-        // d="M x1 y1 H x2 y2"
-        d={`M ${xPadding - 5} ${svgHeight - 28} H ${svgWidth - xPadding + 10}`}
-        stroke="currentColor"
+      <AxisBottom
+        xScale={xScale}
+        xPadding={xPadding}
+        svgHeight={svgHeight}
+        svgWidth={svgWidth}
       />
-      {xScale.ticks().map((value,index) => (
-              <g
-              key={index}
-              transform={`translate(${xScale(value)}, ${svgHeight -28})`}
-              >
-                <line
-                  y2="6"
-                  stroke="currentColor"
-                />
-                <text
-                  key={index}
-                  style={{
-                    fontSize: "10px",
-                    textAnchor: "middle",
-                    transform: "translateY(20px)"
-                  }}>
-                  { value.getFullYear() }
-                </text>
-              </g>
-      ))}
-      {/* AxisLeft */}
-      <path
-        // d="M x1 y1 H x2 y2"
-        d={`M ${xPadding-2} ${svgHeight - 25} L ${xPadding -2} ${yPadding}`}
-        stroke="currentColor"
+      <AxisLeft
+        yScale={yScale}
+        xPadding={xPadding}
+        yPadding={yPadding}
+        svgHeight={svgHeight}
       />
-      {yScale.ticks().map((value,index) => (
-            <g
-            key={index}
-            transform={`translate(${xPadding - 5}, ${svgHeight - yScale(value)})`}
-            >
-              <line
-                x2="4"
-                x1="-3"
-                stroke="currentColor"
-              />
-              <text
-                key={index}
-                style={{
-                  fontSize: "10px",
-                  textAnchor: "middle",
-                  transform: "translateX(-18px) translateY(3px)"
-                }}>
-                { value }
-              </text>
-            </g>
-      ))}
-
       {data.map(({year,gdp}, i) => <RectElement  
                                       key={i}
                                       rectWidth={4}
@@ -196,6 +153,89 @@ export function BarChartWithDiv3() {
   )
 }
 
+interface AxisProperties {
+  xPadding: number;
+  yPadding?: number;
+  svgHeight: number;
+}
+
+interface AxisBottomProperties extends AxisProperties {
+  xScale: d3.ScaleTime<number, number, number | undefined>;
+  svgWidth: number;
+}
+
+function AxisBottom({xScale, xPadding, svgHeight, svgWidth}: AxisBottomProperties) {
+  return (
+    <>
+      <path
+      // d="M x1 y1 H x2 y2"
+      d={`M ${xPadding - 5} ${svgHeight - 28} H ${svgWidth - xPadding + 10}`}
+      stroke="currentColor"
+      />
+      <text transform="rotate(-90)" x="-350" y="60" stroke="currentColor">Gross Domestic Product</text>
+      {xScale && xScale.ticks().map((value,index) => (
+              <g
+              key={index}
+              transform={`translate(${xScale(value)}, ${svgHeight -28})`}
+              >
+                <line
+                  y2="6"
+                  stroke="currentColor"
+                />
+                <text
+                  key={index}
+                  stroke="currentColor"
+                  style={{
+                    fontSize: "10px",
+                    textAnchor: "middle",
+                    transform: "translateY(20px)"
+                  }}>
+                  { value.getFullYear() }
+                </text>
+              </g>
+      ))}
+    </>
+  )
+}
+
+interface AxisLeftProperties extends AxisProperties {
+  yScale: d3.ScaleLinear<number, number, never>;
+}
+
+function AxisLeft({yScale, xPadding, yPadding, svgHeight}: AxisLeftProperties) {
+  return (
+    <>
+          <path
+        // d="M x1 y1 H x2 y2"
+        d={`M ${xPadding-2} ${svgHeight - 25} L ${xPadding -2} ${yPadding}`}
+        stroke="currentColor"
+      />
+      {yScale && yScale.ticks().map((value,index) => (
+            <g
+            key={index}
+            transform={`translate(${xPadding - 5}, ${svgHeight - yScale(value)})`}
+            >
+              <line
+                x2="4"
+                x1="-3"
+                stroke="currentColor"
+              />
+              <text
+                stroke="currentColor"
+                key={index}
+                style={{
+                  fontSize: "10px",
+                  textAnchor: "middle",
+                  transform: "translateX(-18px) translateY(3px)"
+                }}>
+                { value }
+              </text>
+            </g>
+      ))}
+    </>
+  )
+}
+
 interface RectElementProps {
   i: number;
   rectWidth: number;
@@ -206,7 +246,7 @@ interface RectElementProps {
   gdp: string;
 }
 
-export function RectElement({i, rectWidth, barHeight, xSpacing, svgHeight, date, gdp}: RectElementProps) {
+function RectElement({i, rectWidth, barHeight, xSpacing, svgHeight, date, gdp}: RectElementProps) {
   const [isHovered, setIsHovered] = useState(false);
   const changeDirectionIndex = 80;
   const handleMouseEnter = () => {
