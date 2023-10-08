@@ -17,11 +17,11 @@ interface GDPYear {
 function BarChart() {
   const [data, setData] = useState<GDPYear[]>([]);
 
-  const svgHeight = 600;
-  const svgWidth = 1200;
+  const svgHeight = 500;
+  const svgWidth = 800;
   const xPadding = 40;
-  const yPadding = 45;
-  const topPadding = 80;
+  const yPadding = 0;
+  const topPadding = 100;
 
   let xScale: d3.ScaleTime<number, number, number | undefined> = d3.scaleTime();
   let yScale: d3.ScaleLinear<number, number, never> = d3.scaleLinear();
@@ -68,16 +68,19 @@ function BarChart() {
   if (gdpValues.length > 0) {
     [gdpMin, gdpMax] = d3.extent(gdpValues)
     if (gdpMin !== undefined && gdpMax !== undefined) {
-      yScale = d3.scaleLinear([gdpMin, gdpMax], [0 + yPadding, svgHeight - yPadding - topPadding])
+      // yScale = d3.scaleLinear([gdpMin, gdpMax], [0 + yPadding, svgHeight - yPadding - topPadding])
+      yScale = d3.scaleLinear([0, gdpMax], [0, svgHeight-topPadding])
+      console.log(gdpMin, yScale(gdpMin), gdpMin/yScale(gdpMin))
+      console.log(gdpMax, yScale(gdpMax), gdpMax/yScale(gdpMax))
     } else {
       throw Error('Invalid gdp value')
     }
   }
 
-  type rectValue = (input: number) => number;
+  type rectValue = (input: number| Date) => number;
 
   const barHeight: rectValue = (value) => yScale(value);
-  const xSpacing = (date: Date): number=> {
+  const xSpacing:rectValue = (date)=> {
     const returnedMapped = xScale(date)
     if(typeof returnedMapped !== 'undefined') {
       return returnedMapped;
@@ -86,6 +89,150 @@ function BarChart() {
     }
   } 
 
+  return (
+    <main className="bg-black w-full h-[100vh] flex flex-col items-center justify-center">
+      <div className='bg-gray-900 flex flex-col items-center p-4 shadow-[0_10px_20px_rgba(34,197,94,_0.7)] rounded'>
+        <div id='title' className='text-white text-5xl pt-3'>United States GDP</div>
+        <svg width={svgWidth} height={svgHeight} className='inline-block bg-gray-900 m-[1px] text-white'>
+        <AxisBottom
+          xScale={xScale}
+          xPadding={xPadding}
+          svgHeight={svgHeight}
+          svgWidth={svgWidth}
+        />
+        <AxisLeft
+          yScale={yScale}
+          xPadding={xPadding}
+          yPadding={yPadding}
+          svgHeight={svgHeight}
+        />
+        {data.map(({year,gdp}, i) => <RectElement  
+                                        key={i}
+                                        i={i} 
+                                        barHeight={barHeight(gdp)} 
+                                        xSpacing={xSpacing(new Date(year))} 
+                                        svgHeight={svgHeight}
+                                        date={year} 
+                                        gdp={gdp}
+                                      />)}
+        </svg>
+        <div className='text-white self-end mr-8 mt-3'>More Information: http://www.bea.gov/national/pdf/nipaguid.pdf
+        </div>
+      </div>
+    </main>
+  )
+}
+
+interface AxisProperties {
+  xPadding: number;
+  yPadding?: number;
+  svgHeight: number;
+}
+
+interface AxisBottomProperties extends AxisProperties {
+  xScale: d3.ScaleTime<number, number, number | undefined>;
+  svgWidth: number;
+}
+
+function AxisBottom({xScale, xPadding, svgHeight, svgWidth}: AxisBottomProperties) {
+  return (
+      <g id='x-axis'>
+        <path
+        // d="M x1 y1 H x2 y2"
+        d={`M ${xPadding - 5} ${svgHeight-30} H ${svgWidth - xPadding + 10}`}
+        stroke="currentColor"
+        />
+      {xScale && xScale.ticks().map((value,index) => (
+              <g
+              className='tick'
+              key={index}
+              transform={`translate(${xScale(value)}, ${svgHeight -30})`}
+              >
+                <line
+                  y2="6"
+                  stroke="currentColor"
+                />
+                <text
+                  key={index}
+                  className='fill-white'
+                  style={{
+                    fontSize: "10px",
+                    textAnchor: "middle",
+                    transform: "translateY(20px)"
+                  }}>
+                  { value.getFullYear() }
+                </text>
+              </g>
+      ))}
+    </g>
+  )
+}
+
+interface AxisLeftProperties extends AxisProperties {
+  yScale: d3.ScaleLinear<number, number, never>;
+}
+
+function AxisLeft({yScale, xPadding, yPadding, svgHeight}: AxisLeftProperties) {
+  return (
+      <g id='y-axis'>
+        <path
+          // d="M x1 y1 L x2 y2"
+          d={`M ${xPadding-2} ${svgHeight - 25} L ${xPadding -2} ${yPadding}`}
+          stroke="currentColor"
+        />
+        <text transform="rotate(-90)" x="-350" y="60" className='fill-white'>Gross Domestic Product</text>
+
+      {yScale && yScale.ticks().map((value,index) => (
+            <g
+              className='tick'
+              key={index}
+              transform={`translate(${xPadding - 5}, ${svgHeight - yScale(value) -30})`}
+            >
+              <line
+                x2="4"
+                x1="-3"
+                stroke="currentColor"
+              />
+              <text
+                key={index}
+                className='fill-white'
+                style={{
+                  fontSize: "10px",
+                  textAnchor: "middle",
+                  transform: "translateX(-18px) translateY(3px)"
+                }}>
+                { value }
+              </text>
+            </g>
+      ))}
+      </g>
+  )
+}
+
+interface RectElementProps {
+  i: number;
+  barHeight: number;
+  xSpacing: number;
+  svgHeight: number;
+  date: string;
+  gdp: number;
+}
+
+function RectElement({i, barHeight, xSpacing, svgHeight, date, gdp}: RectElementProps) {
+
+  const [isHovered, setIsHovered] = useState(false);
+  const changeDirectionIndex = 80;
+  const rectWidth = 2;
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  
   const yearToNumber = (yyyyMMdd: string) => Number(yyyyMMdd.substring(0,4))  
   const monthToNumber = (yyyyMMdd: string) => Number(yyyyMMdd.substring(5,7))
 
@@ -115,169 +262,23 @@ function BarChart() {
   }
 
   return (
-    <main className="bg-gray-900 w-full h-[100vh] flex flex-col items-center justify-center">
-      <div className='bg-black flex flex-col items-center p-4 shadow-[0_10px_20px_rgba(34,197,94,_0.7)] rounded'>
-        <div id='title' className='text-white text-5xl'>United States GDP</div>
-        <svg width={svgWidth} height={svgHeight} className='inline-block bg-black m-[1px] text-white'>
-        <AxisBottom
-          xScale={xScale}
-          xPadding={xPadding}
-          svgHeight={svgHeight}
-          svgWidth={svgWidth}
-        />
-        <AxisLeft
-          yScale={yScale}
-          xPadding={xPadding}
-          yPadding={yPadding}
-          svgHeight={svgHeight}
-        />
-        {data.map(({year,gdp}, i) => <RectElement  
-                                        key={i}
-                                        rectWidth={4}
-                                        i={i} 
-                                        barHeight={barHeight(gdp)} 
-                                        xSpacing={xSpacing(new Date(year))} 
-                                        svgHeight={svgHeight}
-                                        date={YearToQuarter(year)} 
-                                        gdp={BillionFormat(gdp)}
-                                      />)}
-        </svg>
-        <div className='text-white self-end mr-8 mt-3'>More Information: http://www.bea.gov/national/pdf/nipaguid.pdf
-        </div>
-      </div>
-    </main>
-  )
-}
-
-interface AxisProperties {
-  xPadding: number;
-  yPadding?: number;
-  svgHeight: number;
-}
-
-interface AxisBottomProperties extends AxisProperties {
-  xScale: d3.ScaleTime<number, number, number | undefined>;
-  svgWidth: number;
-}
-
-function AxisBottom({xScale, xPadding, svgHeight, svgWidth}: AxisBottomProperties) {
-  return (
-    <>
-      <g id='x-axis'>
-        <path
-        // d="M x1 y1 H x2 y2"
-        d={`M ${xPadding - 5} ${svgHeight - 28} H ${svgWidth - xPadding + 10}`}
-        stroke="currentColor"
-        />
-      </g>
-      {xScale && xScale.ticks().map((value,index) => (
-              <g
-              key={index}
-              transform={`translate(${xScale(value)}, ${svgHeight -28})`}
-              >
-                <line
-                  className='tick'
-                  y2="6"
-                  stroke="currentColor"
-                />
-                <text
-                  key={index}
-                  className='fill-white'
-                  style={{
-                    fontSize: "10px",
-                    textAnchor: "middle",
-                    transform: "translateY(20px)"
-                  }}>
-                  { value.getFullYear() }
-                </text>
-              </g>
-      ))}
-    </>
-  )
-}
-
-interface AxisLeftProperties extends AxisProperties {
-  yScale: d3.ScaleLinear<number, number, never>;
-}
-
-function AxisLeft({yScale, xPadding, yPadding, svgHeight}: AxisLeftProperties) {
-  return (
-    <>
-      <g id='y-axis'>
-        <path
-          // d="M x1 y1 L x2 y2"
-          d={`M ${xPadding-2} ${svgHeight - 25} L ${xPadding -2} ${yPadding}`}
-          stroke="currentColor"
-        />
-        <text transform="rotate(-90)" x="-350" y="60" className='fill-white'>Gross Domestic Product</text>
-      </g>
-
-      {yScale && yScale.ticks().map((value,index) => (
-            <g
-            key={index}
-            transform={`translate(${xPadding - 5}, ${svgHeight - yScale(value)})`}
-            >
-              <line
-                className='tick'
-                x2="4"
-                x1="-3"
-                stroke="currentColor"
-              />
-              <text
-                key={index}
-                className='fill-white'
-                style={{
-                  fontSize: "10px",
-                  textAnchor: "middle",
-                  transform: "translateX(-18px) translateY(3px)"
-                }}>
-                { value }
-              </text>
-            </g>
-      ))}
-    </>
-  )
-}
-
-interface RectElementProps {
-  i: number;
-  rectWidth: number;
-  barHeight: number;
-  xSpacing: number;
-  svgHeight: number;
-  date: string;
-  gdp: string;
-}
-
-function RectElement({i, rectWidth, barHeight, xSpacing, svgHeight, date, gdp}: RectElementProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const changeDirectionIndex = 80;
-  const handleMouseEnter = () => {
-    setIsHovered(true);
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-  };
-
-  return (
           <>
             <rect key={i} 
-                  height={barHeight -30} width={rectWidth} 
-                  x={xSpacing} y={svgHeight - barHeight} 
+                  height={barHeight} width={rectWidth} 
+                  x={xSpacing} y={svgHeight - barHeight -30} 
                   className={`fill-indigo-600 hover:fill-green-500 bar`}    
                   onMouseEnter={handleMouseEnter}
                   onMouseLeave={handleMouseLeave}
                   data-date={date}
                   data-gdp={gdp}
             />
-            <g id='tooltip' 
-               className={isHovered ? `visible opacity-100 transition-all duration-300` : `invisible opacity-0 transition-all duration-300`}
+            <g id={isHovered ? 'tooltip' : ''} 
+               className={isHovered ? `inline opacity-100 transition-all duration-300` : `hidden opacity-0 transition-all duration-300`}
                data-date={date}
                data-gdp={gdp}
             >
               <rect filter="url(#f1)" height='70' width='230' x={i < changeDirectionIndex ? xSpacing : xSpacing - 200} y={svgHeight - barHeight - 90} className='fill-indigo-800 stroke-green-500 stroke-2'/>
-              <text className='fill-white' x={i < changeDirectionIndex ? xSpacing + 30 : xSpacing - 175} y={svgHeight - barHeight - 50}>{date} - ${gdp}</text>
+              <text className='fill-white' x={i < changeDirectionIndex ? xSpacing + 30 : xSpacing - 175} y={svgHeight - barHeight - 50}>{YearToQuarter(date)} - ${BillionFormat(gdp)}</text>
               <line x1={i < changeDirectionIndex ? xSpacing + 140 : xSpacing - 80} y1={svgHeight - barHeight - 20} x2={xSpacing} y2={svgHeight - barHeight} className='stroke-green-500 stroke-2'/>
               <filter id="f1" x="0" y="0" width="200%" height="200%">
                 <feComponentTransfer in="SourceGraphic">
