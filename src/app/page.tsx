@@ -221,8 +221,6 @@ interface RectElementProps {
 function RectElement({i, barHeight, xSpacing, svgHeight, date, gdp}: RectElementProps) {
 
   const [isHovered, setIsHovered] = useState(false);
-  const changeDirectionIndex = 80;
-  const rectWidth = 2;
 
   const handleMouseEnter = () => {
     setIsHovered(true);
@@ -261,6 +259,11 @@ function RectElement({i, barHeight, xSpacing, svgHeight, date, gdp}: RectElement
     return `${dollarUSLocale.format(value)} Billions`
   }
 
+  
+  const changeDirectionLowIndex = 80;
+  const changeDirectionHighIndex = 260;
+  const rectWidth = 3;
+
   return (
           <>
             <rect key={i} 
@@ -277,9 +280,9 @@ function RectElement({i, barHeight, xSpacing, svgHeight, date, gdp}: RectElement
                data-date={date}
                data-gdp={gdp}
             >
-              <rect filter="url(#f1)" height='70' width='230' x={i < changeDirectionIndex ? xSpacing : xSpacing - 200} y={svgHeight - barHeight - 90} className='fill-indigo-800 stroke-green-500 stroke-2'/>
-              <text className='fill-white' x={i < changeDirectionIndex ? xSpacing + 30 : xSpacing - 175} y={svgHeight - barHeight - 50}>{YearToQuarter(date)} - ${BillionFormat(gdp)}</text>
-              <line x1={i < changeDirectionIndex ? xSpacing + 140 : xSpacing - 80} y1={svgHeight - barHeight - 20} x2={xSpacing} y2={svgHeight - barHeight} className='stroke-green-500 stroke-2'/>
+              <rect filter="url(#f1)" height='70' width='230' x={i < changeDirectionLowIndex ? xSpacing : i < changeDirectionHighIndex ? xSpacing - 200 : xSpacing - 300} y={i < changeDirectionHighIndex ? svgHeight - barHeight - 150 : svgHeight - barHeight} className='fill-indigo-800 stroke-green-500 stroke-2'/>
+              <text className='fill-white' x={i < changeDirectionLowIndex ? xSpacing + 30 : i < changeDirectionHighIndex ? xSpacing - 180 : xSpacing - 280} y={i < changeDirectionHighIndex ? svgHeight - barHeight - 110 : svgHeight - barHeight + 40}>{YearToQuarter(date)} - ${BillionFormat(gdp)}</text>
+              <line x1={i < changeDirectionLowIndex ? xSpacing + 140 : xSpacing - 80} y1={i< changeDirectionHighIndex ? svgHeight - barHeight - 80 : svgHeight - barHeight} x2={xSpacing} y2={svgHeight - barHeight - 30} className='stroke-green-500 stroke-2'/>
               <filter id="f1" x="0" y="0" width="200%" height="200%">
                 <feComponentTransfer in="SourceGraphic">
                 <feFuncR type="discrete" tableValues="0.8"/>
